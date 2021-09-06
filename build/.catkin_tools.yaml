@@ -1,0 +1,6 @@
+devel_space: /home/erush91/reflect_ws/src/terrain_detection/devel
+install: false
+install_space: /home/erush91/reflect_ws/src/terrain_detection/install
+profile: default
+source_space: /home/erush91/reflect_ws/src/terrain_detection/src
+workspace: /home/erush91/reflect_ws/src/terrain_detection

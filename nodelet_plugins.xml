@@ -1,0 +1,9 @@
+<library path="lib/librobot_lidar_detection">
+    <class name="robot_lidar_detection/robot_lidar_detection_nodelet"
+         type="robot_lidar_detection::RobotLidarDetectionNodelet"
+         base_class_type="nodelet::Nodelet">
+    <description>
+      Nodelet to take in depth sensor data and compute Wide Field Integration coefficients.
+    </description>
+  </class>
+</library>
