@@ -58,8 +58,8 @@
 #include <pcl/search/pcl_search.h>
 #include <pcl/filters/extract_indices.h>
 
-#include "sensor_msgs/Imu.h"
 #include "std_msgs/Float32.h"
+#include "nav_msgs/Odometry.h"
 
 #include <tf/transform_listener.h>
 #include <tf/transform_datatypes.h>
@@ -82,14 +82,14 @@ namespace robot_lidar_detection
     public:
       // ROS communication
       boost::shared_ptr<image_transport::ImageTransport> it_in_;
-      image_transport::CameraSubscriber sub_low_depth_image_;
-      ros::Subscriber sub_pcl_1;
-      ros::Subscriber sub_pcl_2;
+      ros::Subscriber sub_pcl;
+      ros::Subscriber sub_odom;
 
       ros::Publisher pub_output_;
       ros::Publisher pub_pcl_1;
       ros::Publisher pub_pcl_2;
       ros::Publisher pub_dist;
+      ros::Publisher pub_estop;
 
       ros::NodeHandle nh;
       ros::NodeHandle private_nh;
@@ -98,6 +98,7 @@ namespace robot_lidar_detection
 
       int queue_size_;
       std::string target_frame_id_;
+
 
       // Dynamic reconfigure
       boost::recursive_mutex config_mutex_;
@@ -113,7 +114,8 @@ namespace robot_lidar_detection
 
       void configCb(Config &config, uint32_t level);
 
-      void pcl_1_cb(const sensor_msgs::PointCloud2::ConstPtr&);
+      void pcl_cb(const sensor_msgs::PointCloud2::ConstPtr&);
+      void odom_cb(const nav_msgs::Odometry::ConstPtr&);
 
     private:
 
@@ -122,9 +124,25 @@ namespace robot_lidar_detection
       float intensity_GT_threshold_;
       float ror_radius_;
       float ror_min_neighbors_;
-      float distance_sq;
-      float distance_sq_last;
-      float distance_min;
+      float estop_seconds_;
+      float estop_timeout_seconds_;
+      float estop_reset_radius_;
+
+      float distance_sq = 0;
+      float distance_sq_last = 0;
+      float distance_sq_min = 0;
+      float distance_min = 0;
+      bool estop_flag = 0;
+      bool estop_timeout_flag = 0;
+      int estop_timer = 0;
+      int estop_timeout_timer = 0;
+      float odom_x;
+      float odom_y;
+      float odom_z;
+      float odom_estop_x;
+      float odom_estop_y;
+      float odom_estop_z;
+      float traveled_distance;
 
 
   };
