@@ -1,11 +1,14 @@
 <launch>
-  <group ns="H02">
-    <node pkg="nodelet" type="nodelet" name="standalone_nodelet" args="manager" output="log" />
+  <arg name="vehicle_name" default="H01"/>
+
+    <node pkg="nodelet" type="nodelet" name="standalone_nodelet" args="manager" output="screen" />
     
     <!-- Terrain detection: Center RealSense -->
-    <node pkg="nodelet" type="nodelet" name="robot_lidar_detection" args="load robot_lidar_detection/robot_lidar_detection_nodelet standalone_nodelet" respawn="true" output="log">
-        <remap from="pcl_in"      to="horiz/os_cloud_node/points" />
-        <remap from="odom_in"      to="odometry" />
+    <node pkg="nodelet" type="nodelet" name="robot_lidar_detection" args="load robot_lidar_detection/robot_lidar_detection_nodelet standalone_nodelet" respawn="true" output="screen">
+        <param name="vehicle_name"                value="$(arg vehicle_name)"/>
+        <remap from="pcl_in"                      to="horiz/os_cloud_node/points" />
+        <remap from="odom_in"                     to="odometry" />
+        <remap from="robot_lidar_detection/estop" to="motion_command_filter/slowdown" />
         <rosparam>
             intensity_LT_threshold:   3000
             intensity_GT_threshold:    500
@@ -16,5 +19,4 @@
             estop_reset_radius:          5
         </rosparam>
     </node>
-  </group>
 </launch>

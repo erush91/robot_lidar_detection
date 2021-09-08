@@ -119,7 +119,7 @@ namespace robot_lidar_detection
 
     private:
 
-      float normal_radius_;
+      std::string vehicle_name_;
       float intensity_LT_threshold_;
       float intensity_GT_threshold_;
       float ror_radius_;
@@ -128,21 +128,16 @@ namespace robot_lidar_detection
       float estop_timeout_seconds_;
       float estop_reset_radius_;
 
-      float distance_sq = 0;
-      float distance_sq_last = 0;
-      float distance_sq_min = 0;
-      float distance_min = 0;
       bool estop_flag = 0;
       bool estop_timeout_flag = 0;
       int estop_timer = 0;
       int estop_timeout_timer = 0;
-      float odom_x;
-      float odom_y;
-      float odom_z;
-      float odom_estop_x;
-      float odom_estop_y;
-      float odom_estop_z;
-      float traveled_distance;
+      float odom_x = 0;
+      float odom_y = 0;
+      float odom_z = 0;
+      float odom_estop_x = 0;
+      float odom_estop_y = 0;
+      float odom_estop_z = 0;
 
 
   };

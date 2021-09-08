@@ -14,6 +14,7 @@ namespace robot_lidar_detection
         // Read parameters
         private_nh.param("queue_size", queue_size_, 5);
         private_nh.param("target_frame_id", target_frame_id_, std::string());
+        private_nh.param<std::string>("vehicle_name", vehicle_name_,"H02");
 
         // Set up dynamic reconfigure
         reconfigure_server_.reset(new ReconfigureServer(config_mutex_, private_nh));
@@ -77,19 +78,26 @@ namespace robot_lidar_detection
         //float ror_ror_radius_ = 0.05;
         //float ror_ror_min_neighbors_ = 40;
 
-        pcl::RadiusOutlierRemoval<pcl::PointXYZI> outrem;
-        outrem.setInputCloud(cloud_hi_intensity);
-        outrem.setRadiusSearch(ror_radius_);
-        outrem.setMinNeighborsInRadius(ror_min_neighbors_);
-        // outrem.setKeepOrganized(true);
-        outrem.filter (*cloud_ror);
+        if(cloud_hi_intensity->points.size() > 0)
+        {
+            pcl::RadiusOutlierRemoval<pcl::PointXYZI> outrem;
+            outrem.setInputCloud(cloud_hi_intensity);
+            outrem.setRadiusSearch(ror_radius_);
+            outrem.setMinNeighborsInRadius(ror_min_neighbors_);
+            // outrem.setKeepOrganized(true);
+            outrem.filter (*cloud_ror);
 
-        cloud_ror->header.seq = cloud_in->header.seq;
-        cloud_ror->header.frame_id = cloud_in->header.frame_id;
-        pcl_conversions::toPCL(ros::Time::now(), cloud_ror->header.stamp);
-        pub_pcl_2.publish (cloud_ror);
+            cloud_ror->header.seq = cloud_in->header.seq;
+            cloud_ror->header.frame_id = cloud_in->header.frame_id;
+            pcl_conversions::toPCL(ros::Time::now(), cloud_ror->header.stamp);
+            pub_pcl_2.publish (cloud_ror);
+        }
 
-        // distance_min = 0;
+        float distance_min;
+        float distance_sq;
+        float distance_sq_last;
+        float distance_sq_min;
+        float traveled_distance;
         // Assign original xyz data to normal estimate cloud (this is necessary because by default the xyz fields are empty)
 
         for (int i = 0; i < cloud_ror->points.size(); i++)
@@ -121,12 +129,9 @@ namespace robot_lidar_detection
             odom_estop_z = odom_z;
         }
 
-        if(odom_estop_x > 0) // only compute if estop has been triggered at least once
-        {
-            traveled_distance = sqrt((odom_estop_x - odom_x) * (odom_estop_x - odom_x)
-                                   + (odom_estop_y - odom_y) * (odom_estop_y - odom_y)
-                                   + (odom_estop_z - odom_z) * (odom_estop_z - odom_z));
-        }
+        traveled_distance = sqrt((odom_estop_x - odom_x) * (odom_estop_x - odom_x)
+                                + (odom_estop_y - odom_y) * (odom_estop_y - odom_y)
+                                + (odom_estop_z - odom_z) * (odom_estop_z - odom_z));
 
         if(estop_flag)
         {
