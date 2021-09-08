@@ -22,13 +22,14 @@ namespace robot_lidar_detection
         reconfigure_server_->setCallback(f);
 
         sub_pcl = nh.subscribe("pcl_in", 1, &RobotLidarDetectionNodelet::pcl_cb, this);
-        sub_odom = nh.subscribe("odom_in", 1, &RobotLidarDetectionNodelet::odom_cb, this);
+        
 
         // Publish Point Cloud
-        pub_pcl_1    = private_nh.advertise<PointCloud>("pcl_out_1", 10);
-        pub_pcl_2    = private_nh.advertise<PointCloud>("pcl_out_2", 10);
+        pub_pcl_1    = private_nh.advertise<PointCloud>("cloud_hi_intensity/raw", 10);
+        pub_pcl_2    = private_nh.advertise<PointCloud>("cloud_hi_intensity/filtered", 10);
         pub_dist     = private_nh.advertise<std_msgs::Float32>("robot_distance", 10);
         pub_estop    = private_nh.advertise<std_msgs::Bool>("estop", 10);
+        pub_slowdown = private_nh.advertise<std_msgs::Bool>("slowdown", 10);
     };
 
     void RobotLidarDetectionNodelet::configCb(Config &config, uint32_t level)
@@ -40,18 +41,8 @@ namespace robot_lidar_detection
         ror_radius_                 = config.ror_radius;
         ror_min_neighbors_          = config.ror_min_neighbors;
         estop_seconds_              = config.estop_seconds;
-        estop_timeout_seconds_      = config.estop_timeout_seconds;
-        estop_reset_radius_         = config.estop_reset_radius;
-
+        slowdown_seconds_           = config.slowdown_seconds;
     };
-
-
-    void RobotLidarDetectionNodelet::odom_cb(const nav_msgs::Odometry::ConstPtr& odom_in)
-    {
-        odom_x = odom_in->pose.pose.position.x;
-        odom_y = odom_in->pose.pose.position.y;
-        odom_z = odom_in->pose.pose.position.z;
-    }
 
     void RobotLidarDetectionNodelet::pcl_cb(const sensor_msgs::PointCloud2::ConstPtr& cloud_in_ros)
     {
@@ -100,71 +91,79 @@ namespace robot_lidar_detection
         float traveled_distance;
         // Assign original xyz data to normal estimate cloud (this is necessary because by default the xyz fields are empty)
 
-        for (int i = 0; i < cloud_ror->points.size(); i++)
+        if(cloud_ror->points.size() > 0)
         {
-            distance_sq = cloud_ror->points[i].x * cloud_ror->points[i].x
-                        + cloud_ror->points[i].y * cloud_ror->points[i].y
-                        + cloud_ror->points[i].z * cloud_ror->points[i].z;
-            distance_sq_last = distance_sq;
-            distance_sq_min = min(distance_sq, distance_sq_last);
+            for (int i = 0; i < cloud_ror->points.size(); i++)
+            {
+                distance_sq = cloud_ror->points[i].x * cloud_ror->points[i].x
+                            + cloud_ror->points[i].y * cloud_ror->points[i].y
+                            + cloud_ror->points[i].z * cloud_ror->points[i].z;
+                distance_sq_last = distance_sq;
+                distance_sq_min = min(distance_sq, distance_sq_last);
+            }
+            
+            distance_min = sqrt(distance_sq_min);
+
+            if(distance_min != 0)
+            {
+                std_msgs::Float32 robot_distance;
+                robot_distance.data = distance_min;
+                pub_dist.publish(robot_distance);
+            }
         }
 
-        distance_min = sqrt(distance_sq_min);
-        
-        if(distance_min > 0.5) // ignore if distance_min = 0 (that means nothing was detected)
-        {
-            std_msgs::Float32 robot_distance;
-            robot_distance.data = distance_min;
-            pub_dist.publish(robot_distance);
-        }
-
-        if(distance_min > 0.5 && distance_min < 1.0 && !estop_flag && !estop_timeout_flag)
+        if(distance_min != 0 && distance_min < 2.0 && !estop_flag && !slowdown_flag)
         {
             estop_flag = true;
+            slowdown_flag = false;
+
             std_msgs::Bool estop;
             estop.data = true;
             pub_estop.publish(estop);
-            odom_estop_x = odom_x;
-            odom_estop_y = odom_y;
-            odom_estop_z = odom_z;
         }
 
-        traveled_distance = sqrt((odom_estop_x - odom_x) * (odom_estop_x - odom_x)
-                                + (odom_estop_y - odom_y) * (odom_estop_y - odom_y)
-                                + (odom_estop_z - odom_z) * (odom_estop_z - odom_z));
+
+        if(estop_timer >= 20 * estop_seconds_)
+        {
+            estop_flag = false;
+            slowdown_flag = true;
+            estop_timer = 0;
+
+            std_msgs::Bool estop;
+            estop.data = false;
+            pub_estop.publish(estop);
+
+            std_msgs::Bool slowdown;
+            slowdown.data = true;
+            pub_slowdown.publish(slowdown);
+        }
+
+        if(slowdown_timer >= 20 * slowdown_seconds_)
+        {
+            estop_flag = false;
+            slowdown_flag = false;
+            slowdown_timer = 0;
+            
+            std_msgs::Bool slowdown;
+            slowdown.data = false;
+            pub_slowdown.publish(slowdown);
+        }
 
         if(estop_flag)
         {
             estop_timer++;
         }
 
-        if(estop_timeout_flag)
+        if(slowdown_flag)
         {
-            estop_timeout_timer++;
+            slowdown_timer++;
         }
 
-        if(estop_timer > 20 * estop_seconds_)
-        {
-            estop_flag = false;
-            estop_timeout_flag = true;
-            estop_timer = 0;
-            std_msgs::Bool estop;
-            estop.data = false;
-            pub_estop.publish(estop);
-        }
-
-        if(estop_timeout_timer > 20 * estop_timeout_seconds_ && traveled_distance > estop_reset_radius_)
-        {
-            estop_flag = false;
-            estop_timeout_flag = false;
-            estop_timeout_timer = 0;
-        }
-
-        ROS_INFO("%.2f / %i / %i / %i / %i / %.1f / %.1f / %.1f / %.1f / %.1f / %.1f / %.1f", distance_min, estop_flag, estop_timeout_flag, estop_timer, estop_timeout_timer, traveled_distance, odom_x, odom_y, odom_z, odom_estop_x, odom_estop_y, odom_estop_z);
-        // std::cout << estop_flag << " / " << estop_timeout_flag << " / " << estop_timer << " / " << estop_timeout_timer ...
+        ROS_INFO("DISTANCE [m]: %.3f // ESTOP %i  %i // SLOWDOWN %i  %i", distance_min, estop_flag, estop_timer, slowdown_flag, slowdown_timer);
+        // std::cout << estop_flag << " / " << slowdown_flag << " / " << estop_timer << " / " << slowdown_timer ...
         //           << " / " traveled_distance ...
-        //           << " / " << odom_x << " / " << odom_y << " / " << odom_z << " / " <<  ...
-        //           << " / " << odom_estop_x << " / " << odom_estop_u << " / " << odom_estop_z << " / " std::endl;
+        //           << " / " << odom_x << " / " << odom_y << " / "  << " / " <<  ...
+        //           << " / " << odom_estop_x << " / " << odom_estop_u << " / " << " / " std::endl;
         
     };
 }
