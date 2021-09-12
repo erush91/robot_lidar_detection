@@ -9,13 +9,20 @@
         <remap from="pcl_in"                            to="horiz/os_cloud_node/points"/>
         <remap from="odom_in"                           to="odometry"/>
         <rosparam>
-            estop_radius:              2.0
-            estop_seconds:             5.0
+            estop_seconds:             3.0
             slowdown_seconds:         10.0
             intensity_LT_threshold:   1000
             intensity_GT_threshold:    700
             ror_radius:               0.05
             ror_min_neighbors:          40
+            min_distance:              0.6
+            max_distance:              2.0
+            entrance_x_min:           -5.0
+            entrance_x_max:            5.0
+            entrance_y_min:           -5.0
+            entrance_y_max:            5.0
+            entrance_z_min:           -5.0
+            entrance_z_max:            5.0
         </rosparam>
     </node>
 </launch>

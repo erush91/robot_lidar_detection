@@ -37,19 +37,28 @@ namespace robot_lidar_detection
     {
         config_ = config;
 
-        intensity_LT_threshold_     = config.intensity_LT_threshold;
-        intensity_GT_threshold_     = config.intensity_GT_threshold;
-        ror_radius_                 = config.ror_radius;
-        ror_min_neighbors_          = config.ror_min_neighbors;
         estop_seconds_              = config.estop_seconds;
         slowdown_seconds_           = config.slowdown_seconds;
+        intensity_LT_threshold_     = config.intensity_LT_threshold;
+        intensity_GT_threshold_     = config.intensity_GT_threshold;
+        min_distance_               = config.min_distance;
+        max_distance_               = config.max_distance;
+        ror_radius_                 = config.ror_radius;
+        ror_min_neighbors_          = config.ror_min_neighbors;
+        entrance_x_min_             = config.entrance_x_min;
+        entrance_x_max_             = config.entrance_x_max;
+        entrance_y_min_             = config.entrance_y_min;
+        entrance_y_max_             = config.entrance_y_max;
+        entrance_z_min_             = config.entrance_z_min;
+        entrance_z_max_             = config.entrance_z_max;
+
     };
 
     void RobotLidarDetectionNodelet::odom_cb(const nav_msgs::Odometry::ConstPtr& odom_in)
     {
-        if(odom_in->pose.pose.position.x > -5 && odom_in->pose.pose.position.x <  5
-        && odom_in->pose.pose.position.y > -5 && odom_in->pose.pose.position.y <  5
-        && odom_in->pose.pose.position.z > -5 && odom_in->pose.pose.position.z <  5)
+        if(odom_in->pose.pose.position.x > entrance_x_min_ && odom_in->pose.pose.position.x <  entrance_x_max_
+        && odom_in->pose.pose.position.y > entrance_y_min_ && odom_in->pose.pose.position.y <  entrance_y_max_
+        && odom_in->pose.pose.position.z > entrance_z_min_ && odom_in->pose.pose.position.z <  entrance_z_max_)
         {
             entrance_flag = 1;
         }
@@ -122,7 +131,7 @@ namespace robot_lidar_detection
             }
         }
 
-        if(distance_min != 0.6 && distance_min < 2.0 && !estop_flag && !slowdown_flag && !entrance_flag)
+        if(distance_min > min_distance_ && distance_min < max_distance_ && !estop_flag && !slowdown_flag && !entrance_flag)
         {
             estop_flag = true;
             slowdown_flag = false;
