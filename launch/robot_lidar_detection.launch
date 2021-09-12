@@ -7,14 +7,13 @@
     <node pkg="nodelet" type="nodelet" name="robot_lidar_detection" args="load robot_lidar_detection/robot_lidar_detection_nodelet standalone_nodelet" respawn="true" output="log">
         <param name="vehicle_name"                      value="$(arg vehicle_name)"/>
         <remap from="pcl_in"                            to="horiz/os_cloud_node/points"/>
-        <remap from="robot_lidar_detection/estop"       to="estop" />
-        <remap from="robot_lidar_detection/slowdown"    to="motion_command_filter/slowdown"/>
+        <remap from="odom_in"                           to="odometry"/>
         <rosparam>
             estop_radius:              2.0
             estop_seconds:             5.0
             slowdown_seconds:         10.0
-            intensity_LT_threshold:   3000
-            intensity_GT_threshold:    500
+            intensity_LT_threshold:   1000
+            intensity_GT_threshold:    700
             ror_radius:               0.05
             ror_min_neighbors:          40
         </rosparam>
