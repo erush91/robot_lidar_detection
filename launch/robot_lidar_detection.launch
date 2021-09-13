@@ -1,12 +1,15 @@
 <launch>
   <arg name="vehicle_name" default="H01"/>
+  <arg name="estop_seconds" default="3.0"/>
   <node pkg="nodelet" type="nodelet" name="standalone_nodelet" args="manager" output="log" />
     <node pkg="nodelet" type="nodelet" name="robot_lidar_detection" args="load robot_lidar_detection/robot_lidar_detection_nodelet standalone_nodelet" respawn="true" output="log">
       <param name="vehicle_name"                      value="$(arg vehicle_name)"/>
       <remap from="pcl_in"                            to="horiz/os_cloud_node/points"/>
       <remap from="odom_in"                           to="odometry"/>
+      <remap from="robot_lidar_detection/estop"       to="estop" />
+      <remap from="robot_lidar_detection/slowdown"    to="motion_command_filter/slowdown"/>
+      <param name="estop_seconds" value="$(arg estop_seconds)"/>
       <rosparam>
-          estop_seconds:             3.0
           slowdown_seconds:         10.0
           intensity_LT_threshold:   1000
           intensity_GT_threshold:    700
