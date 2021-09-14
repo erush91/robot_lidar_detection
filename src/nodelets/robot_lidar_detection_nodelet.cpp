@@ -22,6 +22,7 @@ namespace robot_lidar_detection
         reconfigure_server_->setCallback(f);
 
         sub_pcl = nh.subscribe("pcl_in", 1, &RobotLidarDetectionNodelet::pcl_cb, this);
+        sub_odom = nh.subscribe("odom_in", 1, &RobotLidarDetectionNodelet::odom_cb, this);
         
 
         // Publish Point Cloud
@@ -36,14 +37,36 @@ namespace robot_lidar_detection
     {
         config_ = config;
 
-        intensity_LT_threshold_     = config.intensity_LT_threshold;
-        intensity_GT_threshold_     = config.intensity_GT_threshold;
-        ror_radius_                 = config.ror_radius;
-        ror_min_neighbors_          = config.ror_min_neighbors;
         estop_seconds_              = config.estop_seconds;
         slowdown_seconds_           = config.slowdown_seconds;
+        intensity_LT_threshold_     = config.intensity_LT_threshold;
+        intensity_GT_threshold_     = config.intensity_GT_threshold;
+        min_distance_               = config.min_distance;
+        max_distance_               = config.max_distance;
+        ror_radius_                 = config.ror_radius;
+        ror_min_neighbors_          = config.ror_min_neighbors;
+        entrance_x_min_             = config.entrance_x_min;
+        entrance_x_max_             = config.entrance_x_max;
+        entrance_y_min_             = config.entrance_y_min;
+        entrance_y_max_             = config.entrance_y_max;
+        entrance_z_min_             = config.entrance_z_min;
+        entrance_z_max_             = config.entrance_z_max;
+
     };
 
+    void RobotLidarDetectionNodelet::odom_cb(const nav_msgs::Odometry::ConstPtr& odom_in)
+    {
+        if(odom_in->pose.pose.position.x > entrance_x_min_ && odom_in->pose.pose.position.x <  entrance_x_max_
+        && odom_in->pose.pose.position.y > entrance_y_min_ && odom_in->pose.pose.position.y <  entrance_y_max_
+        && odom_in->pose.pose.position.z > entrance_z_min_ && odom_in->pose.pose.position.z <  entrance_z_max_)
+        {
+            entrance_flag = 1;
+        }
+        else
+        {
+            entrance_flag = 0;
+        }
+    }
     void RobotLidarDetectionNodelet::pcl_cb(const sensor_msgs::PointCloud2::ConstPtr& cloud_in_ros)
     {
         pcl::PointCloud<pcl::PointXYZI>::Ptr cloud_in (new pcl::PointCloud<pcl::PointXYZI>);
@@ -64,10 +87,6 @@ namespace robot_lidar_detection
         pub_pcl_1.publish (cloud_hi_intensity);
 
         pcl::PointCloud<pcl::PointXYZI>::Ptr cloud_ror(new pcl::PointCloud<pcl::PointXYZI>);
-
-        // tuning for detecting robots at 1.5m away
-        //float ror_ror_radius_ = 0.05;
-        //float ror_ror_min_neighbors_ = 40;
 
         if(cloud_hi_intensity->points.size() > 0)
         {
@@ -112,7 +131,7 @@ namespace robot_lidar_detection
             }
         }
 
-        if(distance_min != 0 && distance_min < 2.0 && !estop_flag && !slowdown_flag)
+        if(distance_min > min_distance_ && distance_min < max_distance_ && !estop_flag && !slowdown_flag && !entrance_flag)
         {
             estop_flag = true;
             slowdown_flag = false;
@@ -121,7 +140,6 @@ namespace robot_lidar_detection
             estop.data = true;
             pub_estop.publish(estop);
         }
-
 
         if(estop_timer >= 20 * estop_seconds_)
         {

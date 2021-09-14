@@ -83,6 +83,7 @@ namespace robot_lidar_detection
       // ROS communication
       boost::shared_ptr<image_transport::ImageTransport> it_in_;
       ros::Subscriber sub_pcl;
+      ros::Subscriber sub_odom;
 
       ros::Publisher pub_output_;
       ros::Publisher pub_pcl_1;
@@ -115,17 +116,27 @@ namespace robot_lidar_detection
       void configCb(Config &config, uint32_t level);
 
       void pcl_cb(const sensor_msgs::PointCloud2::ConstPtr&);
+      void odom_cb(const nav_msgs::Odometry::ConstPtr&);
 
     private:
 
       std::string vehicle_name_;
+      float estop_seconds_;
+      float slowdown_seconds_;
       float intensity_LT_threshold_;
       float intensity_GT_threshold_;
       float ror_radius_;
       float ror_min_neighbors_;
-      float estop_seconds_;
-      float slowdown_seconds_;
+      float min_distance_;
+      float max_distance_;
+      float entrance_x_min_;
+      float entrance_x_max_;
+      float entrance_y_min_;
+      float entrance_y_max_;
+      float entrance_z_min_;
+      float entrance_z_max_;
 
+      bool entrance_flag = 1;
       bool estop_flag = 0;
       bool slowdown_flag = 0;
       int estop_timer = 0;
